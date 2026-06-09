@@ -1,37 +1,52 @@
 import { FunctionComponent, useEffect, useRef } from 'react'
-import type { SetModalOpen, SetContent } from '@storyblok/field-plugin'
+import type { SetModalOpen } from '@storyblok/field-plugin'
 import { ImagekitMediaLibraryWidget } from 'imagekit-media-library-widget'
 import type { MediaLibraryWidgetCallback } from 'imagekit-media-library-widget'
-import type { SelectedAsset } from './types'
+import type { StoryblokAsset } from './types'
 
 const ModalToggle: FunctionComponent<{
   isModalOpen: boolean
   setModalOpen: SetModalOpen<unknown>
-  setContent: SetContent<SelectedAsset[]>
+  onSelect: (assets: StoryblokAsset[]) => void
   imagekitId: string
   multiple: boolean
   maxFiles?: number
-}> = ({ isModalOpen, setModalOpen, setContent, imagekitId, multiple, maxFiles }) => {
+}> = ({ isModalOpen, setModalOpen, onSelect, imagekitId, multiple, maxFiles }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<ImagekitMediaLibraryWidget | null>(null)
+  // Always call the latest onSelect without recreating the widget on every render
+  const onSelectRef = useRef(onSelect)
+  useEffect(() => { onSelectRef.current = onSelect })
 
   useEffect(() => {
     if (!containerRef.current) return
 
     const callback: MediaLibraryWidgetCallback = (payload) => {
-      const assets: SelectedAsset[] = payload.data.map((file: any) => ({
-        fileId: file.fileId,
+      // The widget fires this for both INSERT and CLOSE events; CLOSE has no `data` array.
+      if (!Array.isArray(payload?.data)) {
+        setModalOpen(false)
+        return
+      }
+      const assets: StoryblokAsset[] = payload.data.map((file: any) => ({
+        id: String(file.fileId),
+        alt: '',
         name: file.name,
-        filePath: file.filePath,
-        url: file.url,
+        focus: '',
+        title: '',
+        width: file.width ?? 0,
+        height: file.height ?? 0,
+        source: '',
+        filename: file.url,
+        copyright: '',
+        fieldtype: 'asset' as const,
+        meta_data: {},
+        public_id: file.filePath,
+        aspect_ratio: file.width && file.height ? file.width / file.height : 0,
+        is_external_url: true,
         thumbnail: file.thumbnail,
-        fileType: file.fileType,
         mime: file.mime,
-        width: file.width,
-        height: file.height,
-        size: file.size,
       }))
-      setContent(assets)
+      onSelectRef.current(assets)
       setModalOpen(false)
     }
 
@@ -42,12 +57,12 @@ const ModalToggle: FunctionComponent<{
         renderOpenButton: false,
         dimensions: {
           height: '100%',
-          width: '100%'
+          width: '100%',
         },
         mlSettings: {
           multiple,
           ...(maxFiles !== undefined && { maxFiles }),
-toolbar: {
+          toolbar: {
             showCloseButton: false,
           },
           loginViaSSO: false,
@@ -61,7 +76,7 @@ toolbar: {
       widgetRef.current?.destroy()
       widgetRef.current = null
     }
-  }, [setModalOpen, setContent, imagekitId, multiple, maxFiles])
+  }, [setModalOpen, imagekitId, multiple, maxFiles])
 
   useEffect(() => {
     if (!widgetRef.current) return
@@ -70,18 +85,7 @@ toolbar: {
     }
   }, [isModalOpen])
 
-  return (
-    <>
-      <button
-        className="btn w-full"
-        type="button"
-        onClick={() => setModalOpen(!isModalOpen)}
-      >
-        {isModalOpen ? 'Close' : 'Open'} modal
-      </button>
-      <div ref={containerRef} />
-    </>
-  )
+  return <div ref={containerRef} />
 }
 
 export default ModalToggle
