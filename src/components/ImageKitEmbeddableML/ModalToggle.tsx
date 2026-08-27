@@ -2,7 +2,7 @@ import { FunctionComponent, useEffect, useRef } from 'react'
 import type { SetModalOpen, SetContent } from '@storyblok/field-plugin'
 import { ImagekitMediaLibraryWidget } from 'imagekit-media-library-widget'
 import type { MediaLibraryWidgetCallback } from 'imagekit-media-library-widget'
-import type { SelectedAsset } from './types'
+import type { SelectedAsset, IKWidgetFile } from './types'
 
 const ModalToggle: FunctionComponent<{
   isModalOpen: boolean
@@ -19,7 +19,7 @@ const ModalToggle: FunctionComponent<{
     if (!containerRef.current) return
 
     const callback: MediaLibraryWidgetCallback = (payload) => {
-      const assets: SelectedAsset[] = payload.data.map((file: any) => ({
+      const assets: SelectedAsset[] = payload.data.map((file: IKWidgetFile) => ({
         fileId: file.fileId,
         name: file.name,
         filePath: file.filePath,
@@ -47,8 +47,8 @@ const ModalToggle: FunctionComponent<{
         mlSettings: {
           multiple,
           ...(maxFiles !== undefined && { maxFiles }),
-toolbar: {
-            showCloseButton: false,
+          toolbar: {
+            showCloseButton: true,
           },
           loginViaSSO: false,
           widgetImagekitId: imagekitId,
