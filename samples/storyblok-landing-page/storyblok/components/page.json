@@ -1,0 +1,14 @@
+{
+  "name": "page",
+  "display_name": "Page",
+  "is_root": true,
+  "is_nestable": false,
+  "schema": {
+    "body": {
+      "type": "bloks",
+      "display_name": "Body",
+      "restrict_components": true,
+      "component_whitelist": ["hero", "feature_grid", "gallery"]
+    }
+  }
+}

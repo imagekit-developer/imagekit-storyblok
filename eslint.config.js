@@ -5,7 +5,9 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist'] },
+  // `samples/` is a separate Next.js project with its own ESLint config and
+  // `npm run lint` script — it shouldn't be linted as part of the plugin.
+  { ignores: ['dist', 'samples'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

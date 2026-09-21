@@ -1,0 +1,43 @@
+{
+  "name": "Home",
+  "slug": "home",
+  "content": {
+    "component": "page",
+    "body": [
+      {
+        "component": "hero",
+        "headline": "Ship media-rich pages without touching code",
+        "subheadline": "Marketers pick assets from ImageKit's DAM directly inside Storyblok. Developers just render the URL.",
+        "cta_label": "Get started",
+        "cta_url": { "url": "https://imagekit.io", "linktype": "url" },
+        "image": []
+      },
+      {
+        "component": "feature_grid",
+        "heading": "Why this pairing works",
+        "features": [
+          {
+            "component": "feature",
+            "title": "One asset library",
+            "description": "ImageKit stays the single source of truth for media instead of duplicating uploads into Storyblok."
+          },
+          {
+            "component": "feature",
+            "title": "Real-time transformations",
+            "description": "Resize, crop and optimize at request time by editing the URL — no re-upload needed."
+          },
+          {
+            "component": "feature",
+            "title": "No backend to run",
+            "description": "The field plugin is hosted by Storyblok; this Next.js app only reads the story's JSON."
+          }
+        ]
+      },
+      {
+        "component": "gallery",
+        "heading": "Recent uploads",
+        "images": []
+      }
+    ]
+  }
+}

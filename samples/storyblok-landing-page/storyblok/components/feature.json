@@ -1,0 +1,26 @@
+{
+  "name": "feature",
+  "display_name": "Feature",
+  "is_root": false,
+  "is_nestable": true,
+  "schema": {
+    "title": {
+      "type": "text",
+      "display_name": "Title",
+      "required": true
+    },
+    "description": {
+      "type": "textarea",
+      "display_name": "Description"
+    },
+    "icon": {
+      "type": "custom",
+      "display_name": "Icon",
+      "field_type": "imagekit",
+      "options": [
+        { "name": "imagekitId", "value": "YOUR_IMAGEKIT_ID" },
+        { "name": "multiple", "value": "false" }
+      ]
+    }
+  }
+}

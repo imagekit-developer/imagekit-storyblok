@@ -1,4 +1,3 @@
-import _FieldPlugin from './components/FieldPlugin'
 import ImageKitEmbeddableML from './components/ImageKitEmbeddableML'
 import { FunctionComponent } from 'react'
 

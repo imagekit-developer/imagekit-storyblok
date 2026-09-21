@@ -1,0 +1,22 @@
+{
+  "name": "gallery",
+  "display_name": "Gallery",
+  "is_root": false,
+  "is_nestable": true,
+  "schema": {
+    "heading": {
+      "type": "text",
+      "display_name": "Heading"
+    },
+    "images": {
+      "type": "custom",
+      "display_name": "Images",
+      "field_type": "imagekit",
+      "options": [
+        { "name": "imagekitId", "value": "YOUR_IMAGEKIT_ID" },
+        { "name": "multiple", "value": "true" },
+        { "name": "maxFiles", "value": "12" }
+      ]
+    }
+  }
+}

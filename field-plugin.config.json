@@ -1,3 +1,14 @@
 {
-  "options": []
+  "options": [
+    { "name": "imagekitId", "value": "" },
+    { "name": "multiple", "value": "true" },
+    { "name": "maxFiles", "value": "" },
+    { "name": "loginViaSSO", "value": "false" },
+    { "name": "folderPath", "value": "" },
+    { "name": "collectionId", "value": "" },
+    { "name": "searchQuery", "value": "" },
+    { "name": "fileType", "value": "" },
+    { "name": "transformation", "value": "" },
+    { "name": "quality", "value": "" }
+  ]
 }

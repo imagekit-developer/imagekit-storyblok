@@ -1,0 +1,35 @@
+name: Deploy field plugin
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test -- --run
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx @storyblok/field-plugin-cli@latest deploy --skipPrompts --scope partner-portal --name imagekit
+        env:
+          STORYBLOK_PERSONAL_ACCESS_TOKEN: ${{ secrets.STORYBLOK_PERSONAL_ACCESS_TOKEN }}

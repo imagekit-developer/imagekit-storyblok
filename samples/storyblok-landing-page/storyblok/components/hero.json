@@ -1,0 +1,34 @@
+{
+  "name": "hero",
+  "display_name": "Hero",
+  "is_root": false,
+  "is_nestable": true,
+  "schema": {
+    "headline": {
+      "type": "text",
+      "display_name": "Headline",
+      "required": true
+    },
+    "subheadline": {
+      "type": "textarea",
+      "display_name": "Subheadline"
+    },
+    "cta_label": {
+      "type": "text",
+      "display_name": "CTA label"
+    },
+    "cta_url": {
+      "type": "multilink",
+      "display_name": "CTA URL"
+    },
+    "image": {
+      "type": "custom",
+      "display_name": "Background image",
+      "field_type": "imagekit",
+      "options": [
+        { "name": "imagekitId", "value": "YOUR_IMAGEKIT_ID" },
+        { "name": "multiple", "value": "false" }
+      ]
+    }
+  }
+}
