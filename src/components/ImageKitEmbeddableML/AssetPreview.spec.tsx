@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, test, expect, vi } from 'vitest'
 import AssetPreview from './AssetPreview'
@@ -19,7 +19,7 @@ const asset = (overrides: Partial<SelectedAsset> = {}): SelectedAsset => ({
   ...overrides,
 })
 
-const noop = { onRemove: vi.fn(), onMove: vi.fn(), onTransform: vi.fn() }
+const noop = { onRemove: vi.fn(), onMove: vi.fn(), onUpdate: vi.fn() }
 
 describe('AssetPreview', () => {
   test('renders nothing for an empty list', () => {
@@ -80,59 +80,136 @@ describe('AssetPreview', () => {
   })
 })
 
-describe('AssetPreview transformation editor', () => {
+const openSettings = async (user: ReturnType<typeof userEvent.setup>, name = 'photo.jpg') =>
+  user.click(screen.getByRole('button', { name: new RegExp(`^settings for ${name}`, 'i') }))
+
+describe('AssetPreview settings panel', () => {
   test('is closed by default', () => {
     render(<AssetPreview assets={[asset()]} {...noop} />)
     expect(screen.queryByLabelText('Transformation')).not.toBeInTheDocument()
   })
 
-  test('opens on clicking the edit button, prefilled with the current transformation', async () => {
+  test('opens from the settings button, prefilled with the saved settings', async () => {
     const user = userEvent.setup()
-    render(<AssetPreview assets={[asset({ transformation: 'w-400' })]} {...noop} />)
+    render(
+      <AssetPreview
+        assets={[asset({ transformation: 'e-grayscale', title: 'Hero', alt: 'Three dogs', copyright: 'ACME', source: 'https://x.y' })]}
+        {...noop}
+      />,
+    )
 
-    await user.click(screen.getByRole('button', { name: /edit transformation for photo.jpg/i }))
-    expect(screen.getByLabelText('Transformation')).toHaveValue('w-400')
+    await openSettings(user)
+    expect(screen.getByLabelText('Transformation')).toHaveValue('e-grayscale')
+    expect(screen.getByLabelText('Title/Caption')).toHaveValue('Hero')
+    expect(screen.getByLabelText('Alt text')).toHaveValue('Three dogs')
+    expect(screen.getByLabelText('Copyright')).toHaveValue('ACME')
+    expect(screen.getByLabelText('Source')).toHaveValue('https://x.y')
   })
 
-  test('applying a new transformation calls onTransform with the trimmed value and closes the editor', async () => {
+  test('also opens by clicking the thumbnail', async () => {
     const user = userEvent.setup()
-    const onTransform = vi.fn()
-    render(<AssetPreview assets={[asset()]} {...noop} onTransform={onTransform} />)
+    render(<AssetPreview assets={[asset()]} {...noop} />)
 
-    await user.click(screen.getByRole('button', { name: /edit transformation for photo.jpg/i }))
-    await user.type(screen.getByLabelText('Transformation'), '  w-400,h-300  ')
-    await user.click(screen.getByRole('button', { name: /^apply$/i }))
+    await user.click(screen.getByRole('button', { name: /open settings for photo.jpg/i }))
+    expect(screen.getByLabelText('Transformation')).toBeInTheDocument()
+  })
 
-    expect(onTransform).toHaveBeenCalledWith('file-1', '  w-400,h-300  ')
+  test('saving passes every field to onUpdate and closes the panel', async () => {
+    const user = userEvent.setup()
+    const onUpdate = vi.fn()
+    render(<AssetPreview assets={[asset()]} {...noop} onUpdate={onUpdate} />)
+
+    await openSettings(user)
+    await user.type(screen.getByLabelText('Transformation'), 'e-grayscale')
+    await user.type(screen.getByLabelText('Title/Caption'), 'A caption')
+    await user.type(screen.getByLabelText('Alt text'), 'Some alt')
+    await user.type(screen.getByLabelText('Copyright'), 'ACME')
+    await user.type(screen.getByLabelText('Source'), 'Unsplash')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    expect(onUpdate).toHaveBeenCalledWith('file-1', {
+      transformation: 'e-grayscale',
+      focalPoint: undefined,
+      title: 'A caption',
+      alt: 'Some alt',
+      copyright: 'ACME',
+      source: 'Unsplash',
+    })
     expect(screen.queryByLabelText('Transformation')).not.toBeInTheDocument()
   })
 
-  test('cancelling closes the editor without calling onTransform', async () => {
+  test('cancelling closes the panel without calling onUpdate', async () => {
     const user = userEvent.setup()
-    const onTransform = vi.fn()
-    render(<AssetPreview assets={[asset()]} {...noop} onTransform={onTransform} />)
+    const onUpdate = vi.fn()
+    render(<AssetPreview assets={[asset()]} {...noop} onUpdate={onUpdate} />)
 
-    await user.click(screen.getByRole('button', { name: /edit transformation for photo.jpg/i }))
-    await user.type(screen.getByLabelText('Transformation'), 'w-400')
+    await openSettings(user)
+    await user.type(screen.getByLabelText('Alt text'), 'x')
     await user.click(screen.getByRole('button', { name: /cancel/i }))
 
-    expect(onTransform).not.toHaveBeenCalled()
+    expect(onUpdate).not.toHaveBeenCalled()
     expect(screen.queryByLabelText('Transformation')).not.toBeInTheDocument()
   })
 
-  test('only shows Reset when a transformation is already applied, and it clears via onTransform(undefined)', async () => {
+  test('clicking the image sets a focal point from the click position', async () => {
     const user = userEvent.setup()
-    const onTransform = vi.fn()
+    const onUpdate = vi.fn()
+    render(<AssetPreview assets={[asset()]} {...noop} onUpdate={onUpdate} />)
 
-    const { rerender } = render(<AssetPreview assets={[asset()]} {...noop} onTransform={onTransform} />)
-    await user.click(screen.getByRole('button', { name: /edit transformation for photo.jpg/i }))
-    expect(screen.queryByRole('button', { name: /reset/i })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /cancel/i }))
+    await openSettings(user)
+    const picker = screen.getByRole('button', { name: /^set focal point/i })
+    picker.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 100 }) as DOMRect
+    fireEvent.click(picker, { clientX: 50, clientY: 75, detail: 1 })
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
 
-    rerender(<AssetPreview assets={[asset({ transformation: 'w-400' })]} {...noop} onTransform={onTransform} />)
-    await user.click(screen.getByRole('button', { name: /edit transformation for photo.jpg/i }))
-    await user.click(screen.getByRole('button', { name: /reset/i }))
+    expect(onUpdate).toHaveBeenCalledWith('file-1', expect.objectContaining({ focalPoint: { x: 0.25, y: 0.75 } }))
+  })
 
-    expect(onTransform).toHaveBeenCalledWith('file-1', undefined)
+  test('arrow keys nudge the focal point, and Reset clears it', async () => {
+    const user = userEvent.setup()
+    const onUpdate = vi.fn()
+    render(<AssetPreview assets={[asset({ focalPoint: { x: 0.5, y: 0.5 } })]} {...noop} onUpdate={onUpdate} />)
+
+    await openSettings(user)
+    const picker = screen.getByRole('button', { name: /^set focal point/i })
+    fireEvent.keyDown(picker, { key: 'ArrowRight' })
+    fireEvent.keyDown(picker, { key: 'ArrowUp' })
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+    expect(onUpdate).toHaveBeenLastCalledWith('file-1', expect.objectContaining({ focalPoint: { x: 0.55, y: 0.45 } }))
+
+    await openSettings(user)
+    await user.click(screen.getByRole('button', { name: /reset focal point/i }))
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+    expect(onUpdate).toHaveBeenLastCalledWith('file-1', expect.objectContaining({ focalPoint: undefined }))
+  })
+
+  test('hides the focal point picker for videos', async () => {
+    const user = userEvent.setup()
+    render(<AssetPreview assets={[asset({ fileType: 'non-image', mime: 'video/mp4' })]} {...noop} />)
+
+    await openSettings(user)
+    expect(screen.queryByRole('button', { name: /^set focal point/i })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Alt text')).toBeInTheDocument()
+  })
+})
+
+describe('AssetPreview copy URL button', () => {
+  test('copies the delivered (transformed) url', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+    const url = 'https://ik.imagekit.io/demo/photo.jpg?tr=e-grayscale'
+    render(<AssetPreview assets={[asset({ url })]} {...noop} />)
+
+    await user.click(screen.getByRole('button', { name: /copy url for photo.jpg/i }))
+
+    expect(writeText).toHaveBeenCalledWith(url)
+    expect(await screen.findByRole('button', { name: /url copied/i })).toBeInTheDocument()
+  })
+
+  test('sits to the left of the settings button', () => {
+    render(<AssetPreview assets={[asset()]} {...noop} />)
+    const copy = screen.getByRole('button', { name: /copy url/i })
+    const settings = screen.getByRole('button', { name: /^settings for/i })
+    expect(copy.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })

@@ -1,6 +1,9 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import {
   applyDeliverySettings,
+  applySettings,
+  cropPreview,
+  focusTransformation,
   buildInitialView,
   isVideoAsset,
   mergeAssets,
@@ -274,5 +277,77 @@ describe('previewThumbnail', () => {
     const a = asset()
     previewThumbnail(a, 'w-100,h-100')
     expect(a.url).toBe('https://ik.imagekit.io/demo/photo.jpg')
+  })
+})
+
+describe('focusTransformation', () => {
+  test('falls back to fo-auto without a focal point', () => {
+    expect(focusTransformation(asset(), 300, 300)).toBe('w-300,h-300,fo-auto')
+  })
+
+  test('maps the focal point into the scaled image\'s pixel space', () => {
+    // 2700x1800 covering a 300x300 box scales by 1/6 to 450x300; x=0.15 of 450 = 67.5 -> 68.
+    const dogs = asset({ width: 2700, height: 1800, focalPoint: { x: 0.15, y: 0.5 } })
+    expect(focusTransformation(dogs, 300, 300)).toBe('w-300,h-300,xc-68,yc-150')
+  })
+
+  test('uses whichever dimension forces the larger scale', () => {
+    // 800x600 into 400x100: width needs 0.5, height needs ~0.167 -> scale 0.5 -> 400x300.
+    const a = asset({ width: 800, height: 600, focalPoint: { x: 0.5, y: 0.9 } })
+    expect(focusTransformation(a, 400, 100)).toBe('w-400,h-100,xc-200,yc-270')
+  })
+
+  test('falls back to fo-auto when the asset has no known dimensions', () => {
+    expect(focusTransformation(asset({ width: 0, height: 0, focalPoint: { x: 0.2, y: 0.2 } }), 100, 100)).toBe(
+      'w-100,h-100,fo-auto',
+    )
+  })
+})
+
+describe('cropPreview', () => {
+  test('crops the original url, chaining the editor transformation first', () => {
+    const a = asset({ url: 'https://ik.imagekit.io/demo/photo.jpg?tr=e-sepia', transformation: 'e-sepia' })
+    expect(cropPreview(a, { transformation: 'e-grayscale', focalPoint: { x: 0.5, y: 0.5 } }, 100, 100)).toBe(
+      'https://ik.imagekit.io/demo/photo.jpg?tr=e-grayscale:w-100,h-100,xc-67,yc-50',
+    )
+  })
+
+  test('is just the crop when there is no transformation', () => {
+    expect(cropPreview(asset(), { transformation: '  ' }, 100, 100)).toBe(
+      'https://ik.imagekit.io/demo/photo.jpg?tr=w-100,h-100,fo-auto',
+    )
+  })
+})
+
+describe('applySettings', () => {
+  test('applies the transformation to url and stores trimmed metadata', () => {
+    const result = applySettings(asset(), {
+      transformation: 'e-grayscale',
+      focalPoint: { x: 0.3, y: 0.6 },
+      title: '  A caption ',
+      alt: 'Alt',
+      copyright: 'ACME',
+      source: 'Unsplash',
+    })
+    expect(result.url).toBe('https://ik.imagekit.io/demo/photo.jpg?tr=e-grayscale')
+    expect(result.focalPoint).toEqual({ x: 0.3, y: 0.6 })
+    expect(result.title).toBe('A caption')
+    expect(result.alt).toBe('Alt')
+    expect(result.copyright).toBe('ACME')
+    expect(result.source).toBe('Unsplash')
+  })
+
+  test('blank fields clear previously saved values', () => {
+    const saved = asset({ title: 'Old', alt: 'Old', focalPoint: { x: 0.1, y: 0.1 } })
+    const result = applySettings(saved, { transformation: '', title: ' ', alt: '', focalPoint: undefined })
+    expect(result.title).toBeUndefined()
+    expect(result.alt).toBeUndefined()
+    expect(result.focalPoint).toBeUndefined()
+    expect(result.transformation).toBeUndefined()
+  })
+
+  test('does not bake the focal point into the delivered url', () => {
+    const result = applySettings(asset(), { focalPoint: { x: 0.2, y: 0.8 } })
+    expect(result.url).toBe(asset().url)
   })
 })

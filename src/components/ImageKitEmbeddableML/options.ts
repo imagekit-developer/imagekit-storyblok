@@ -1,5 +1,5 @@
 import type { FileTypeValue, InitialView } from 'imagekit-media-library-widget'
-import type { SelectedAsset } from './types'
+import type { AssetSettings, SelectedAsset } from './types'
 
 const FILE_TYPES = ['images', 'videos', 'cssJs', 'others'] as const
 type FileType = (typeof FILE_TYPES)[number]
@@ -131,6 +131,61 @@ export function withTransformation(asset: SelectedAsset, transformation: string 
 export function previewThumbnail(asset: SelectedAsset, transformation: string | undefined): string {
   const clean = transformation?.trim()
   return clean ? appendTransformation(asset.thumbnail, clean) : asset.thumbnail
+}
+
+/**
+ * The ImageKit params that crop an asset to `width`×`height` around its focal point.
+ *
+ * With the default `c-maintain_ratio` crop, ImageKit first scales the image to cover the requested
+ * box and only then applies `xc`/`yc` — in that *scaled* image's pixel space. Arithmetic
+ * expressions like `iw_mul_0.3` resolve against the original dimensions instead (verified against
+ * a live 2700×1800 image), so the scaled center has to be computed here from the stored
+ * fractions. Falls back to `fo-auto` when no focal point is set.
+ */
+export function focusTransformation(
+  asset: Pick<SelectedAsset, 'width' | 'height' | 'focalPoint'>,
+  width: number,
+  height: number,
+): string {
+  const size = `w-${width},h-${height}`
+  const { focalPoint } = asset
+  if (!focalPoint || asset.width <= 0 || asset.height <= 0) return `${size},fo-auto`
+
+  const scale = Math.max(width / asset.width, height / asset.height)
+  const xc = Math.round(focalPoint.x * asset.width * scale)
+  const yc = Math.round(focalPoint.y * asset.height * scale)
+  return `${size},xc-${xc},yc-${yc}`
+}
+
+/**
+ * A `width`×`height` crop of the asset as a frontend would render it: the editor's own
+ * transformation (if any) as the first step, then a focal-point-aware crop as the next.
+ */
+export function cropPreview(
+  asset: SelectedAsset,
+  settings: Pick<AssetSettings, 'transformation' | 'focalPoint'>,
+  width: number,
+  height: number,
+): string {
+  const crop = focusTransformation({ ...asset, focalPoint: settings.focalPoint }, width, height)
+  const own = settings.transformation?.trim()
+  return appendTransformation(asset.originalUrl ?? asset.url, own ? `${own}:${crop}` : crop)
+}
+
+function cleanText(value: string | undefined): string | undefined {
+  return value?.trim() || undefined
+}
+
+/** Applies everything saved from an asset's settings panel, recomputing `url` as needed. */
+export function applySettings(asset: SelectedAsset, settings: AssetSettings): SelectedAsset {
+  return {
+    ...withTransformation(asset, settings.transformation),
+    focalPoint: settings.focalPoint,
+    title: cleanText(settings.title),
+    alt: cleanText(settings.alt),
+    copyright: cleanText(settings.copyright),
+    source: cleanText(settings.source),
+  }
 }
 
 /** Applies the field-level default "transformation"/"quality" options to a newly selected asset. */

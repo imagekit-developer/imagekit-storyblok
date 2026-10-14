@@ -140,6 +140,12 @@ type ImageKitAsset = {
   width: number
   height: number
   size: number
+  transformation?: string // editor-applied, already baked into `url`
+  focalPoint?: { x: number; y: number } // fractions 0–1, set in the field's settings panel
+  title?: string
+  alt?: string
+  copyright?: string
+  source?: string
 }
 ```
 
@@ -169,6 +175,18 @@ rare: the field's inline editor is meant for creative edits (color, focus, forma
 re-specifying sizing a block already owns. A field whose frontend usage never applies its own
 `transformation` (i.e. always calls `<StoryblokMedia asset={asset} />` with no third prop) has no
 such conflict — the editor's transformation is the only step, exactly as typed.
+
+**Focal points are applied per placement.** The editor's focal point is *not* baked into
+`asset.url`. Each placement crops at its own size, so `ikUrl()` converts the point into ImageKit
+`xc`/`yc` coordinates for that size whenever the placement's transformation has both `w-` and
+`h-`, replacing any `fo-*` focus. Gallery's `w-480,h-480,fo-auto,c-maintain_ratio` becomes
+`w-480,h-480,c-maintain_ratio,xc-…,yc-…`. Placements cropped by the browser instead (the
+full-bleed Hero uses `object-cover` on a width-only URL) get the same point as `object-position`
+from `focalPointStyle()`. With no focal point set, both fall back to `fo-auto` / centered.
+
+**Metadata fields**: `StoryblokMedia` uses `alt` for the image's `alt` (falling back to the file
+name) and `title` for its `title`. `Gallery.tsx` renders `title` as a `<figcaption>` with
+`copyright` underneath, linked to `source` when one is set.
 
 **Video assets render as a real `<video>` player**, not a broken `<img>`. ImageKit's own
 per-file `fileType` is only ever `"image"` or `"non-image"` (never `"video"`) — `isVideoAsset()`

@@ -32,9 +32,40 @@ export function ikUrl(asset: ImageKitAsset, transformation: string): string {
   const params = query.split('&').filter(Boolean)
   const existingTr = params.find((param) => param.startsWith('tr='))?.slice('tr='.length)
   const otherParams = params.filter((param) => !param.startsWith('tr='))
-  const chained = existingTr ? `${existingTr}:${transformation}` : transformation
+  const placement = withFocalPoint(asset, transformation)
+  const chained = existingTr ? `${existingTr}:${placement}` : placement
   otherParams.push(`tr=${chained}`)
   return `${base}?${otherParams.join('&')}`
+}
+
+/**
+ * If the editor set a focal point and this placement crops (has both `w-` and `h-`), replace any
+ * `fo-*` focus with explicit `xc`/`yc` centered on it. With the default `c-maintain_ratio` crop,
+ * ImageKit scales the image to cover the box first and reads `xc`/`yc` in that *scaled* image's
+ * pixels — so the center is computed from the original dimensions and the requested box here.
+ * Placements that don't crop server-side (e.g. width-only) rely on `focalPointStyle()` instead.
+ */
+function withFocalPoint(asset: ImageKitAsset, transformation: string): string {
+  const { focalPoint } = asset
+  const parts = transformation.split(',')
+  const width = Number(parts.find((part) => /^w-\d+$/.test(part))?.slice(2))
+  const height = Number(parts.find((part) => /^h-\d+$/.test(part))?.slice(2))
+  if (!focalPoint || !width || !height || asset.width <= 0 || asset.height <= 0) return transformation
+
+  const scale = Math.max(width / asset.width, height / asset.height)
+  const xc = Math.round(focalPoint.x * asset.width * scale)
+  const yc = Math.round(focalPoint.y * asset.height * scale)
+  return [...parts.filter((part) => !part.startsWith('fo-')), `xc-${xc}`, `yc-${yc}`].join(',')
+}
+
+/**
+ * `object-position` for a browser-side `object-fit: cover` crop, so the focal point also holds
+ * when the browser (not ImageKit) does the cropping — e.g. a full-bleed hero background.
+ */
+export function focalPointStyle(asset: ImageKitAsset): { objectPosition: string } | undefined {
+  const { focalPoint } = asset
+  if (!focalPoint) return undefined
+  return { objectPosition: `${Math.round(focalPoint.x * 100)}% ${Math.round(focalPoint.y * 100)}%` }
 }
 
 /**

@@ -1,5 +1,5 @@
 import type { ImageKitAsset } from '@/lib/types'
-import { ikUrl, isVideoAsset } from '@/lib/utils'
+import { focalPointStyle, ikUrl, isVideoAsset } from '@/lib/utils'
 
 interface StoryblokMediaProps {
   asset: ImageKitAsset
@@ -25,6 +25,8 @@ export default function StoryblokMedia({ asset, className, transformation }: Sto
         controls
         muted
         playsInline
+        aria-label={asset.alt || asset.title || asset.name}
+        title={asset.title}
         width={asset.width || undefined}
         height={asset.height || undefined}
         preload="metadata"
@@ -36,6 +38,15 @@ export default function StoryblokMedia({ asset, className, transformation }: Sto
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={asset.name} width={asset.width} height={asset.height} className={className} loading="lazy" />
+    <img
+      src={src}
+      alt={asset.alt ?? asset.name}
+      title={asset.title}
+      width={asset.width}
+      height={asset.height}
+      className={className}
+      style={focalPointStyle(asset)}
+      loading="lazy"
+    />
   )
 }

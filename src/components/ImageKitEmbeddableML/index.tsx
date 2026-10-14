@@ -3,8 +3,8 @@ import AssetPreview from './AssetPreview'
 import ModalToggle from './ModalToggle'
 import { FunctionComponent } from 'react'
 import { useFieldPlugin } from '@storyblok/field-plugin/react'
-import type { SelectedAsset } from './types'
-import { mergeAssets, moveAsset, parseOptions, withTransformation } from './options'
+import type { AssetSettings, SelectedAsset } from './types'
+import { applySettings, mergeAssets, moveAsset, parseOptions } from './options'
 
 const isValidAsset = (item: unknown): item is SelectedAsset =>
   typeof item === 'object' && item !== null && 'url' in item && 'fileId' in item
@@ -36,16 +36,14 @@ const FieldPlugin: FunctionComponent = () => {
     actions.setContent(moveAsset(assets, fromIndex, toIndex))
   }
 
-  const handleTransform = (fileId: string, transformation: string | undefined) => {
-    actions.setContent(
-      assets.map((asset) => (asset.fileId === fileId ? withTransformation(asset, transformation) : asset)),
-    )
+  const handleUpdate = (fileId: string, settings: AssetSettings) => {
+    actions.setContent(assets.map((asset) => (asset.fileId === fileId ? applySettings(asset, settings) : asset)))
   }
 
   return (
     <div>
       <div className="container">
-        <AssetPreview assets={assets} onRemove={handleRemove} onMove={handleMove} onTransform={handleTransform} />
+        <AssetPreview assets={assets} onRemove={handleRemove} onMove={handleMove} onUpdate={handleUpdate} />
         <ModalToggle
           isModalOpen={data.isModalOpen}
           setModalOpen={actions.setModalOpen}

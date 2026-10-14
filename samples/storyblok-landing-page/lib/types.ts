@@ -24,6 +24,12 @@ export interface ImageKitAsset {
   duration?: number
   /** ImageKit transformation string (e.g. "w-400,h-300,fo-auto") currently applied to `url`. */
   transformation?: string
+  /** Point of interest as fractions (0–1) of the original width/height. Applied by `ikUrl()` when cropping. */
+  focalPoint?: { x: number; y: number }
+  title?: string
+  alt?: string
+  copyright?: string
+  source?: string
 }
 
 /**

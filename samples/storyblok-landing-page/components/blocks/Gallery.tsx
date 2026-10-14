@@ -11,12 +11,29 @@ export default function Gallery({ blok }: { blok: GalleryStoryblok }) {
       {blok.heading && <h2 className="mb-10 text-center text-3xl font-semibold">{blok.heading}</h2>}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
         {images.map((asset) => (
-          <StoryblokMedia
-            key={asset.fileId}
-            asset={asset}
-            transformation="w-480,h-480,fo-auto,c-maintain_ratio"
-            className="aspect-square w-full rounded-md object-cover"
-          />
+          <figure key={asset.fileId} className="m-0">
+            <StoryblokMedia
+              asset={asset}
+              transformation="w-480,h-480,fo-auto,c-maintain_ratio"
+              className="aspect-square w-full rounded-md object-cover"
+            />
+            {(asset.title || asset.copyright) && (
+              <figcaption className="mt-2 text-sm">
+                {asset.title && <span className="block font-medium">{asset.title}</span>}
+                {asset.copyright && (
+                  <span className="block text-xs text-muted-foreground">
+                    {asset.source ? (
+                      <a href={asset.source} className="hover:underline" target="_blank" rel="noreferrer">
+                        {asset.copyright}
+                      </a>
+                    ) : (
+                      asset.copyright
+                    )}
+                  </span>
+                )}
+              </figcaption>
+            )}
+          </figure>
         ))}
       </div>
       {images.length === 0 && (
